@@ -1,0 +1,275 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --bg:     #06060f;
+  --panel:  #0b0b18;
+  --alt:    #070712;
+  --border: #1c1830;
+  --gold:   #c8a84b;
+  --goldb:  #eecc5a;
+  --goldd:  #6a5828;
+  --goldf:  rgba(200,168,75,0.07);
+  --text:   #cfc5a8;
+  --dim:    #6a6050;
+  --green:  #4ade80;
+  --red:    #f87171;
+  --blue:   #7aa2f7;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  overscroll-behavior: none;
+}
+
+#app { display: flex; flex-direction: column; height: 100%; }
+
+/* ── ヘッダー ────────────────────────────────────────────────────────── */
+header {
+  flex-shrink: 0;
+  padding: calc(10px + var(--safe-t)) 16px 9px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.brand .title {
+  font-family: 'Cinzel', serif;
+  font-size: 15px; font-weight: 900;
+  color: var(--goldb);
+  letter-spacing: 4px;
+  text-shadow: 0 0 16px rgba(200,168,75,0.3);
+}
+.brand .sub { font-size: 8px; color: var(--goldd); letter-spacing: 4px; margin-top: 1px; }
+
+#sync-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  width: 34px; height: 34px;
+  border-radius: 3px;
+  font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+#sync-btn.busy { color: var(--gold); border-color: var(--goldd); animation: spin 1s linear infinite; }
+#sync-btn.err  { color: var(--red);  border-color: rgba(248,113,113,0.4); }
+#sync-btn.ok   { color: var(--green); border-color: rgba(74,222,128,0.35); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#sync-line {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--dim);
+  padding: 5px 16px;
+  background: var(--alt);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#sync-line.err { color: var(--red); }
+
+/* ── 画面 ────────────────────────────────────────────────────────────── */
+main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.screen { display: none; padding: 14px 14px 24px; }
+.screen.active { display: block; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 14px 15px;
+  margin-bottom: 12px;
+}
+.panel-title {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--goldd);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+/* ── 分野チップ ──────────────────────────────────────────────────────── */
+.chips {
+  display: flex; gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip-f {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  padding: 8px 15px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 1px;
+  border-radius: 3px;
+}
+.chip-f.on { border-color: var(--gold); color: var(--goldb); background: var(--goldf); }
+.chip-f.locked { opacity: .35; }
+.chip-f .dot { color: var(--green); margin-right: 4px; }
+
+/* ── レベル ──────────────────────────────────────────────────────────── */
+.lv-row { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 10px; }
+.lv-big {
+  font-family: 'Cinzel', serif;
+  font-size: 56px; font-weight: 900;
+  color: var(--gold); line-height: .9;
+  text-shadow: 0 0 30px rgba(200,168,75,0.35);
+}
+.lv-side { padding-bottom: 6px; }
+.lv-title { font-family: 'Cinzel', serif; font-size: 17px; color: #e8e0cc; }
+.lv-sub { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
+.xp-track { width:100%; height:6px; background:#08060f; border-radius:3px; overflow:hidden; border:1px solid var(--border); }
+.xp-track-lg { width:100%; height:10px; background:#080616; border-radius:5px; overflow:hidden; border:1px solid var(--border); }
+.xp-fill { height:100%; background:linear-gradient(90deg,var(--goldd),var(--goldb)); border-radius:inherit; box-shadow:0 0 8px var(--gold); transition:width .8s ease; }
+
+.meta-row { display:flex; justify-content:space-between; font-size:10px; color:var(--dim); margin-top:8px; }
+
+.devline { font-size:10px; color:var(--dim); display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+.devline b { color: var(--text); font-weight: normal; }
+
+.chip-d { display:inline-block; font-size:9px; padding:1px 7px; border-radius:8px; border:1px solid var(--border); color:var(--dim); letter-spacing:1px; }
+.chip-d.me    { border-color:var(--goldd); color:var(--gold); }
+.chip-d.other { border-color:#25355a; color:var(--blue); }
+
+/* ── タイマー ────────────────────────────────────────────────────────── */
+.timer-panel { text-align:center; }
+.elapsed { font-size:40px; color:var(--green); letter-spacing:3px; text-shadow:0 0 20px rgba(74,222,128,0.4); }
+.pulse-dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pdot 1.2s infinite; display:inline-block; }
+.pulse-dot.blue { background: var(--blue); }
+@keyframes pdot { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+
+.btn-big {
+  width: 100%;
+  padding: 16px;
+  font-family: 'Cinzel', serif;
+  font-size: 15px;
+  letter-spacing: 3px;
+  border-radius: 3px;
+  background: transparent;
+}
+.btn-start { border:1px solid var(--green); color:var(--green); }
+.btn-stop  { border:1px solid var(--red);   color:var(--red); }
+.btn-big:disabled { opacity:.35; }
+
+/* ── 他端末 ──────────────────────────────────────────────────────────── */
+.live-box {
+  border:1px solid rgba(122,162,247,0.25);
+  background:rgba(122,162,247,0.05);
+  border-radius:3px;
+  padding:11px 12px;
+  margin-bottom:8px;
+  font-size:12px;
+}
+.live-box .top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.live-box .t { font-size:16px; color:var(--blue); letter-spacing:2px; flex-shrink:0; }
+.live-box .sub { font-size:10px; color:var(--dim); margin-top:4px; }
+
+/* ── 汎用 ────────────────────────────────────────────────────────────── */
+.btn {
+  background: transparent;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 1px;
+  border-radius: 3px;
+  transition: all .15s;
+}
+.btn:disabled { opacity:.35; }
+.btn-gold { border:1px solid var(--gold); color:var(--gold); padding:11px 18px; font-size:13px; }
+.btn-sm   { border:1px solid var(--border); color:var(--dim); padding:8px 13px; font-size:11px; }
+.btn-red  { border:1px solid #3a1010; color:#8a4040; padding:8px 13px; font-size:11px; }
+.btn-wide { width:100%; }
+.row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+.inp {
+  background: var(--alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  padding: 11px 12px;
+  border-radius: 3px;
+  outline: none;
+  width: 100%;
+}
+.inp:focus { border-color: var(--goldd); }
+
+.label { font-size: 11px; color: var(--dim); margin-bottom: 6px; }
+.note  { font-size: 11px; color: var(--dim); line-height: 1.8; }
+.note code { color: var(--gold); }
+.note b { color: var(--text); font-weight: normal; }
+.divider { border:none; border-top:1px solid var(--border); margin:14px 0; }
+.msg-ok  { font-size:11px; color:var(--green); margin-top:10px; word-break:break-all; }
+.msg-err { font-size:11px; color:var(--red);   margin-top:10px; word-break:break-all; }
+
+/* 履歴 */
+.srow { border-bottom:1px solid var(--border); padding:10px 0; font-size:12px; color:var(--dim); }
+.srow:last-child { border-bottom:none; }
+.srow-top { display:flex; justify-content:space-between; gap:8px; }
+
+/* 分野カード */
+.fcard { background:var(--alt); border:1px solid var(--border); border-radius:3px; padding:12px 13px; margin-bottom:9px; }
+.fcard.sel { border-color:var(--goldd); }
+.fcard-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.fcard-name { font-family:'Cinzel',serif; font-size:14px; color:var(--text); }
+.fcard-name.cur { color:var(--goldb); }
+.fcard-meta { font-size:10px; color:var(--dim); margin-bottom:6px; }
+.fcard-actions { display:flex; gap:6px; flex-shrink:0; }
+.confirm-zone { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:9px; padding:9px 10px; background:rgba(248,113,113,0.05); border:1px solid rgba(248,113,113,0.15); border-radius:2px; font-size:11px; color:var(--red); }
+.edit-row { display:flex; gap:6px; margin-top:9px; }
+
+/* ── タブバー ────────────────────────────────────────────────────────── */
+#tabbar {
+  flex-shrink: 0;
+  display: flex;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-b);
+}
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-top: 2px solid transparent;
+  padding: 10px 2px 11px;
+  color: var(--dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.tab-btn .ic { font-size: 15px; line-height: 1; }
+.tab-btn.active { color: var(--goldb); border-top-color: var(--gold); }
+
+/* トースト */
+#toast {
+  position: fixed;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(78px + var(--safe-b));
+  background: #12101f;
+  border: 1px solid var(--goldd);
+  color: var(--text);
+  font-size: 12px;
+  padding: 10px 18px;
+  border-radius: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+  z-index: 50;
+  max-width: 88vw;
+  text-align: center;
+}
+#toast.show { opacity: 1; }

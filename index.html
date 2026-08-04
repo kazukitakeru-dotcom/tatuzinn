@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#06060f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="達人の道">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+  <link rel="stylesheet" href="style.css">
+  <title>達人への道</title>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <div class="title">達人の道</div>
+      <div class="sub">PATH TO MASTERY</div>
+    </div>
+    <button id="sync-btn" aria-label="同期">⟳</button>
+  </header>
+  <div id="sync-line">同期は未設定です</div>
+
+  <main>
+
+    <!-- ══ 記録 ═══════════════════════════════════════════════════════ -->
+    <section id="screen-main" class="screen active">
+      <div class="chips" id="field-chips"></div>
+
+      <div class="panel">
+        <div class="lv-row">
+          <div class="lv-big" id="m-level">1</div>
+          <div class="lv-side">
+            <div class="lv-title" id="m-title">初心者</div>
+            <div class="lv-sub" id="m-field-sub">—</div>
+          </div>
+        </div>
+        <div class="xp-track-lg"><div class="xp-fill" id="m-xp" style="width:0%"></div></div>
+        <div class="meta-row">
+          <span id="m-total">累計 0h 00m</span>
+          <span id="m-pct">0.0%</span>
+          <span id="m-next">次Lv 0h 00m</span>
+        </div>
+        <div class="devline" id="m-devline"></div>
+      </div>
+
+      <div class="panel timer-panel">
+        <div id="m-timer-area"></div>
+      </div>
+
+      <div class="panel" id="live-panel" style="display:none;">
+        <div class="panel-title">いま記録中</div>
+        <div id="m-live"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">全分野サマリー</div>
+        <div id="m-summary"></div>
+      </div>
+    </section>
+
+    <!-- ══ 履歴 ═══════════════════════════════════════════════════════ -->
+    <section id="screen-history" class="screen">
+      <div class="chips" id="hist-chips"></div>
+      <div class="panel">
+        <div class="panel-title" id="hist-title">セッション履歴</div>
+        <div class="devline" id="hist-devline" style="margin-bottom:10px;"></div>
+        <div id="hist-list"></div>
+      </div>
+    </section>
+
+    <!-- ══ 分野 ═══════════════════════════════════════════════════════ -->
+    <section id="screen-fields" class="screen">
+      <div class="panel">
+        <div class="panel-title">分野一覧</div>
+        <div id="fields-list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">分野を追加</div>
+        <input class="inp" id="new-field-inp" placeholder="新しい分野名" style="margin-bottom:9px;">
+        <button class="btn btn-gold btn-wide" id="btn-add-field">追加</button>
+        <div id="add-field-msg" style="display:none;"></div>
+      </div>
+    </section>
+
+    <!-- ══ 書き出し ═══════════════════════════════════════════════════ -->
+    <section id="screen-export" class="screen">
+      <div class="panel">
+        <div class="panel-title">Obsidian へ書き出し</div>
+        <div class="note" style="margin-bottom:14px;">
+          サマリーと分野ごとのノートを書き出します。<br>
+          どの分野を<b>どの端末で</b>何時間やったかが表に全部入ります。<br>
+          共有シートから <b>「ファイルに保存」→ Obsidian の vault フォルダ</b> を選んでください。
+        </div>
+        <button class="btn btn-gold btn-wide" id="btn-obs-zip" style="margin-bottom:9px;">📁 フォルダ一式（ZIP）</button>
+        <button class="btn btn-sm btn-wide" id="btn-obs-single" style="margin-bottom:9px;">📄 1ファイルにまとめる（.md）</button>
+        <button class="btn btn-sm btn-wide" id="btn-obs-copy">📋 サマリーをコピー</button>
+        <div id="obs-msg" style="display:none;"></div>
+        <div class="note" style="margin-top:12px;color:var(--goldd);">
+          ZIP は iPhone の「ファイル」アプリで長押し →「すべてを展開」で開けます。
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">JSON バックアップ</div>
+        <button class="btn btn-sm btn-wide" id="btn-json-export" style="margin-bottom:9px;">↓ エクスポート</button>
+        <div class="label">JSONから読み込む（現在のデータと合流します）</div>
+        <input type="file" id="json-file" accept="application/json,.json" style="display:none;">
+        <button class="btn btn-sm btn-wide" id="btn-json-import">↑ インポート（合流）</button>
+        <div id="json-msg" style="display:none;"></div>
+        <hr class="divider">
+        <div class="panel-title">統計</div>
+        <div id="data-stats"></div>
+      </div>
+    </section>
+
+    <!-- ══ 設定 ═══════════════════════════════════════════════════════ -->
+    <section id="screen-settings" class="screen">
+      <div class="panel">
+        <div class="panel-title">この端末</div>
+        <div class="label">端末名（記録に付く名前）</div>
+        <input class="inp" id="device-name" placeholder="スマホ" style="margin-bottom:9px;">
+        <button class="btn btn-sm btn-wide" id="btn-save-device">保存</button>
+        <div class="note" style="margin-top:10px;">端末ID: <span id="device-id">—</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">PCと同期</div>
+        <div class="note" style="margin-bottom:14px;">
+          わんにゃんメモリーと同じアカウントでログインしてください。<br>
+          <b>PCと同じアカウントにすると記録が合流します。</b><br>
+          <span style="color:var(--goldd);">パスワードは保存されません。</span>
+        </div>
+
+        <div id="auth-out">
+          <div class="label">メールアドレス</div>
+          <input class="inp" id="auth-email" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com" style="margin-bottom:12px;">
+          <div class="label">パスワード</div>
+          <input class="inp" id="auth-pass" type="password" autocomplete="current-password" placeholder="6文字以上" style="margin-bottom:12px;">
+          <button class="btn btn-gold btn-wide" id="btn-signin" style="margin-bottom:9px;">ログイン</button>
+          <button class="btn btn-sm btn-wide" id="btn-signup">新規登録</button>
+        </div>
+
+        <div id="auth-in" style="display:none;">
+          <div style="font-size:12px;margin-bottom:12px;">
+            <span style="color:var(--green);">● ログイン中</span>
+            <span style="color:var(--dim);"> — </span><span id="auth-who">—</span>
+          </div>
+          <button class="btn btn-gold btn-wide" id="btn-sync-now" style="margin-bottom:9px;">今すぐ同期</button>
+          <div class="row">
+            <button class="btn btn-sm" id="btn-signout">ログアウト</button>
+            <label style="font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" id="auto-sync"> 自動同期
+            </label>
+          </div>
+          <div class="note" style="margin-top:10px;">未送信: <span id="pending-count">0</span>件</div>
+        </div>
+
+        <div id="sync-msg" style="display:none;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">記録している端末</div>
+        <div id="device-list"></div>
+      </div>
+
+      <div class="panel">
+        <div class="note">
+          このアプリはホーム画面に追加すると全画面で使えます。<br>
+          Safari の共有ボタン →「ホーム画面に追加」
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav id="tabbar">
+    <button class="tab-btn active" data-screen="main">    <span class="ic">⏱</span>記録</button>
+    <button class="tab-btn"        data-screen="history"> <span class="ic">📜</span>履歴</button>
+    <button class="tab-btn"        data-screen="fields">  <span class="ic">⚔</span>分野</button>
+    <button class="tab-btn"        data-screen="export">  <span class="ic">📤</span>書出</button>
+    <button class="tab-btn"        data-screen="settings"><span class="ic">⚙</span>設定</button>
+  </nav>
+
+  <div id="toast"></div>
+</div>
+
+<script src="core.js"></script>
+<script src="supa.js"></script>
+<script src="obsidian.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -129,6 +129,19 @@ function createSupa(store) {
     });
   }
 
+  // 1回のGETには件数上限（1000件）がある。超えたぶんは静かに落ちるだけで
+  // エラーにならないので、全部取れるまでページを送る。
+  // 積み上げを続けるとセッションはいくらでも増えるため、これが無いと古い記録が消えて見える。
+  const PAGE_SIZE = 1000;
+  async function restAll(path) {
+    const out = [];
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const page = await rest(`${path}&limit=${PAGE_SIZE}&offset=${offset}`);
+      out.push(...(page || []));
+      if (!page || page.length < PAGE_SIZE) return out;
+    }
+  }
+
   const uid = () => (session && session.user ? session.user.id : null);
   const ts  = ms => new Date(ms).toISOString();
   const ms  = s  => (s ? Date.parse(s) : 0);
@@ -137,7 +150,7 @@ function createSupa(store) {
   async function pull() {
     const [stateRows, sessionRows, liveRows] = await Promise.all([
       rest('tatsujin_state?select=doc,updated_at&limit=1'),
-      rest('tatsujin_sessions?select=id,field,started_at,ended_at,hours,device_id&order=started_at.desc'),
+      restAll('tatsujin_sessions?select=id,field,started_at,ended_at,hours,device_id&order=started_at.desc,id.asc'),
       rest('tatsujin_live?select=device_id,device_name,field,started_at,active,updated_at'),
     ]);
 
@@ -188,7 +201,9 @@ function createSupa(store) {
     await rest('tatsujin_state?on_conflict=user_id', {
       method: 'POST',
       prefer: 'resolution=merge-duplicates,return=minimal',
-      body: JSON.stringify([{ user_id: uid(), doc, updated_at: new Date().toISOString() }]),
+      // updated_at は送らない。サーバー側のトリガが now() を入れる。
+      // 端末の時計で入れると、時計がずれた端末の「最後に見た時刻」が狂う。
+      body: JSON.stringify([{ user_id: uid(), doc }]),
     });
   }
 
@@ -221,7 +236,7 @@ function createSupa(store) {
         field:      live ? live.field : null,
         started_at: live ? ts(live.startedAt) : null,
         active:     !!(live && live.active),
-        updated_at: new Date().toISOString(),
+        // updated_at は送らない。サーバー側のトリガが now() を入れる。
       }]),
     });
   }

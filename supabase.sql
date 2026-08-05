@@ -41,6 +41,26 @@ create table if not exists public.tatsujin_live (
   primary key (user_id, device_id)
 );
 
+-- ── 4) updated_at をサーバー時刻で入れる（2026-08-06 追加） ──
+-- 端末の時計で updated_at を入れていると、時計がずれた端末の行が
+-- 「前回より新しい行だけ取る」差分同期の網から永久に漏れる。
+-- このアプリは今のところ全件取得なのでセッションは無事だが、
+-- tatsujin_live の「最後に見た時刻」がずれるので、全端末をサーバー時刻に統一する。
+create or replace function public.set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$;
+
+drop trigger if exists tatsujin_state_touch on public.tatsujin_state;
+create trigger tatsujin_state_touch before insert or update on public.tatsujin_state
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists tatsujin_live_touch on public.tatsujin_live;
+create trigger tatsujin_live_touch before insert or update on public.tatsujin_live
+  for each row execute function public.set_updated_at();
+
 -- ── RLS ──
 alter table public.tatsujin_state    enable row level security;
 alter table public.tatsujin_sessions enable row level security;

@@ -61,6 +61,19 @@ function queueSession(field, s) {
 }
 function queueOp(op) { settings.pendingOps.push(op); saveSettings(); }
 
+/* サーバーにまだ無いセッションを、分野名を添えて集める。
+   data.fields[名前].sessions は分野名を持たないので、ここで付け直す。 */
+function missingSessions(d, remoteIds) {
+  const have = new Set(remoteIds || []);
+  const out = [];
+  Object.entries((d && d.fields) || {}).forEach(([name, f]) => {
+    (f.sessions || []).forEach(s => {
+      if (!have.has(s.id)) out.push({ id: s.id, field: name, start: s.start, end: s.end, hours: s.hours, dev: s.dev });
+    });
+  });
+  return out;
+}
+
 function loadData() {
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(DATA_KEY)); } catch (e) {}
@@ -115,11 +128,13 @@ async function doSync(push) {
         settings.pendingOps.shift();
         saveSettings();
       }
-      if (settings.pending.length) {
-        await supa.uploadSessions(settings.pending);
-        settings.pending = [];
-        saveSettings();
-      }
+      // 送信漏れの拾い直し。
+      // 送信待ちキューに入った分しか送っていなかったので、ログインする前に記録した
+      // セッションが永久に上がらなかった。サーバーにあるIDと突き合わせて、
+      // 足りないものを毎回送り直す。同じIDは上書きされるだけなので重複しない。
+      await supa.uploadSessions(missingSessions(data, await supa.fetchSessionIds()));
+      settings.pending = [];
+      saveSettings();
       await supa.pushState(data);
       await supa.upsertLive(me(), settings.deviceName, (data.live || {})[me()]);
     }

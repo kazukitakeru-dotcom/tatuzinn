@@ -241,6 +241,15 @@ function createSupa(store) {
     });
   }
 
+  /* ── サーバーに既にあるセッションIDの一覧 ──
+     送信待ちキュー（settings.pending）だけに頼ると、ログインする前に記録した分や、
+     キューを取りこぼしたときの分が永久に上がらない。
+     毎回これと突き合わせて、足りないものを送り直す。 */
+  async function fetchSessionIds() {
+    const rows = await restAll('tatsujin_sessions?select=id&order=id.asc');
+    return (rows || []).map(r => r.id);
+  }
+
   /* ── 分野の削除・改名をセッション行にも反映 ── */
   async function deleteFieldRows(field) {
     await rest(`tatsujin_sessions?user_id=eq.${uid()}&field=eq.${encodeURIComponent(field)}`, {
@@ -258,6 +267,7 @@ function createSupa(store) {
   return {
     signUp, signIn, signOut, signedIn, currentUser, refresh,
     pull, pushState, uploadSessions, upsertLive, deleteFieldRows, renameFieldRows,
+    fetchSessionIds,
   };
 }
 

@@ -57,14 +57,20 @@ function createSupa(store) {
     try {
       res = await fetch(url, opts);
     } catch (e) {
-      throw new Error('ネットワークに接続できません');
+      // 「サーバーに届かなかった」のか「サーバーに断られた」のかを、
+      // 呼び出し側が区別できるようにしておく。混同するとログイン情報を捨ててしまう。
+      const err = new Error('ネットワークに接続できません');
+      err.offline = true;
+      throw err;
     }
     const text = await res.text();
     let body = null;
     if (text) { try { body = JSON.parse(text); } catch (e) { body = { message: text }; } }
     if (!res.ok) {
       const m = body && (body.error_description || body.msg || body.message || body.error);
-      throw new Error(supaMessage(m || `${res.status} ${res.statusText}`));
+      const err = new Error(supaMessage(m || `${res.status} ${res.statusText}`));
+      err.status = res.status;
+      throw err;
     }
     return body;
   }
@@ -96,8 +102,15 @@ function createSupa(store) {
       const j = await authPost('token?grant_type=refresh_token', { refresh_token: session.refresh_token });
       setSession(normalizeSession(j));
     } catch (e) {
-      setSession(null);
-      throw new Error('ログインの有効期限が切れました。もう一度ログインしてください');
+      // 通信できなかっただけならログイン情報は捨てない。
+      // ここで捨てていたので、電波の悪い場所や機内モードで開くたびにログインし直しになっていた。
+      if (e.offline) throw new Error('オフラインのため同期できません');
+      // サーバーが「その更新トークンは無効」と答えたときだけログアウト扱いにする
+      if (e.status === 400 || e.status === 401) {
+        setSession(null);
+        throw new Error('ログインの有効期限が切れました。もう一度ログインしてください');
+      }
+      throw e;   // サーバー側の一時的な不調（5xxなど）はそのまま伝える
     }
   }
 

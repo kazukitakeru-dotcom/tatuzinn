@@ -143,6 +143,20 @@ main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .devline { font-size:10px; color:var(--dim); display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
 .devline b { color: var(--text); font-weight: normal; }
 
+/* 端末別の内訳（畳む） */
+.devfold { font-size:10px; color:var(--dim); margin-top:8px; }
+.devfold > summary { cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:4px; padding:2px 0; }
+.devfold > summary::-webkit-details-marker { display:none; }
+.devfold > summary::after { content:'▾'; font-size:9px; }
+.devfold[open] > summary::after { content:'▴'; }
+.devfold-body { margin-top:6px; display:flex; flex-direction:column; gap:4px; }
+.devfold-row { display:flex; align-items:center; gap:6px; }
+.devfold-row b { color:var(--text); font-weight:normal; }
+.devfold-pct { color:var(--dim); margin-left:auto; }
+.devfold-flat { font-size:10px; color:var(--dim); margin-top:8px; display:flex; align-items:center; gap:6px; }
+.devfold-flat b { color:var(--text); font-weight:normal; }
+.devfold-none { font-size:10px; color:var(--dim); margin-top:8px; }
+
 .chip-d { display:inline-block; font-size:9px; padding:1px 7px; border-radius:8px; border:1px solid var(--border); color:var(--dim); letter-spacing:1px; }
 .chip-d.me    { border-color:var(--goldd); color:var(--gold); }
 .chip-d.other { border-color:#25355a; color:var(--blue); }

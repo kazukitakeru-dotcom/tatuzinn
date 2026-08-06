@@ -175,10 +175,24 @@ function startSyncLoops() {
 function devChip(devId) {
   return `<span class="chip-d ${devId === me() ? 'me' : 'other'}">${esc(deviceName(data, devId))}</span>`;
 }
-function devLineHTML(byDev) {
+/* 端末別の内訳。
+   合計は呼び出し側がすでに出しているので、ここは内訳だけを畳んで持つ。
+   端末を2台以上使うと、チップが横に並んで時間が読み取りづらくなっていた。
+   1台しか記録が無いときは畳む意味がないのでそのまま出す。 */
+function devFoldHTML(byDev) {
   const ids = Object.keys(byDev).sort((a, b) => byDev[b] - byDev[a]);
-  if (!ids.length) return '<span style="color:var(--dim)">記録なし</span>';
-  return ids.map(id => `<span>${devChip(id)} <b>${formatHours(byDev[id])}</b></span>`).join('');
+  if (!ids.length) return '<div class="devfold-none">記録なし</div>';
+  if (ids.length === 1) {
+    return `<div class="devfold-flat">${devChip(ids[0])} <b>${formatHours(byDev[ids[0]])}</b></div>`;
+  }
+  const total = ids.reduce((t, id) => t + byDev[id], 0);
+  return `<details class="devfold">
+    <summary>端末別の内訳（${ids.length}台）</summary>
+    <div class="devfold-body">${ids.map(id => {
+      const pct = total > 0 ? Math.round((byDev[id] / total) * 100) : 0;
+      return `<div class="devfold-row">${devChip(id)}<b>${formatHours(byDev[id])}</b><span class="devfold-pct">${pct}%</span></div>`;
+    }).join('')}</div>
+  </details>`;
 }
 
 function renderAll() {
@@ -221,7 +235,7 @@ function renderLevel() {
   $('m-total').textContent     = `累計 ${formatHours(h)}`;
   $('m-pct').textContent       = `${(li.progress * 100).toFixed(1)}%`;
   $('m-next').textContent      = `次Lv ${formatHours(li.hoursToNext)}`;
-  $('m-devline').innerHTML     = devLineHTML(fieldLiveByDevice(data, name));
+  $('m-devline').innerHTML     = devFoldHTML(fieldLiveByDevice(data, name));
 }
 
 function renderTimer() {
@@ -275,7 +289,7 @@ function renderSummary() {
           <span style="color:var(--dim);font-size:10px;">Lv.${li.level} ${getTitle(li.level)} — ${formatHours(h)}</span>
         </div>
         <div class="xp-track"><div class="xp-fill" style="width:${li.progress*100}%"></div></div>
-        <div class="devline">${devLineHTML(fieldLiveByDevice(data, name))}</div>
+        ${devFoldHTML(fieldLiveByDevice(data, name))}
       </div>`;
   }).join('');
 }
@@ -286,7 +300,7 @@ function renderHistory() {
   if (!f) return;
   const sessions = [...f.sessions].sort((a, b) => b.start - a.start);
   $('hist-title').textContent = `${name} — ${sessions.length}件`;
-  $('hist-devline').innerHTML = devLineHTML(fieldByDevice(f));
+  $('hist-devline').innerHTML = devFoldHTML(fieldByDevice(f));
   $('hist-list').innerHTML = sessions.length
     ? sessions.map(s => `
         <div class="srow">
@@ -302,10 +316,12 @@ function renderFieldsList() {
   const c = $('fields-list');
   c.innerHTML = '';
   const names = orderedFieldNames(data);
+  const gTotal = grandTotal(data);   // 「全体の何%か」を出すため
   names.forEach(name => {
     const f = data.fields[name];
     const h = fieldTotal(f);
     const li = getLevelInfo(h);
+    const share = gTotal > 0 ? Math.round((h / gTotal) * 100) : 0;
     const isCur  = name === curField();
     const isConf = confirmDeleteField === name;
     const isEdit = editingField === name;
@@ -337,9 +353,9 @@ function renderFieldsList() {
         <span class="fcard-name ${isCur ? 'cur' : ''}">${esc(name)}${isCur ? ' <span style="font-size:9px;color:var(--goldd);">◆</span>' : ''}${running ? ' <span style="font-size:9px;color:var(--green);">●</span>' : ''}</span>
         <div class="fcard-actions">${actions}</div>
       </div>
-      <div class="fcard-meta">Lv.${li.level} — ${esc(getTitle(li.level))} — ${formatHours(h)} — ${fieldSessionCount(f)}回</div>
+      <div class="fcard-meta">Lv.${li.level} — ${esc(getTitle(li.level))} — ${formatHours(h)} — ${fieldSessionCount(f)}回 — 全体の${share}%</div>
       <div class="xp-track"><div class="xp-fill" style="width:${li.progress*100}%"></div></div>
-      <div class="devline">${devLineHTML(fieldByDevice(f))}</div>
+      ${devFoldHTML(fieldByDevice(f))}
       ${extra}`;
 
     card.querySelectorAll('[data-a]').forEach(btn => {
@@ -368,7 +384,7 @@ function renderStats() {
         <span>${formatHours(h)} / Lv.${getLevel(h)}</span></div>`;
     }).join('') +
     `<hr class="divider">
-     <div class="devline">${devLineHTML(totalByDevice(data))}</div>
+     ${devFoldHTML(totalByDevice(data))}
      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gold);margin-top:9px;">
        <span>総計</span><span>${formatHours(total)}</span></div>`;
 }

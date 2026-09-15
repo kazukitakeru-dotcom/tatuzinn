@@ -30,7 +30,7 @@ function defaultSettings() {
     deviceName: 'スマホ',
     currentField: '',
     autoSync: true,
-    auth: null,        // Supabase のログイン状態
+    auth: null,        // 旧: Supabase のログイン状態。今は localStorage の sb_session_v1（他アプリと共通）
     pending: [],       // まだ送れていないセッション
     pendingOps: [],    // まだ送れていない分野の改名・削除
   };
@@ -49,11 +49,71 @@ function saveSettings() {
   try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) {}
 }
 
-/* Supabase（わんにゃんメモリーと同じプロジェクト） */
-const supa = createSupa({
-  load: () => (settings ? settings.auth : null),
-  save: (s) => { if (settings) { settings.auth = s; saveSettings(); } },
-});
+/* Supabase（わんにゃんメモリーと同じプロジェクト）
+
+   ログイン情報は他アプリ（本棚・買い物メモなど）と同じ localStorage のキーに置く。
+   同じ保存領域で開いている限り、どれか1つでログインすれば全部に効く。
+   （iPhoneのホーム画面に別々に追加したものは保存領域自体が分かれるので共有されない）
+
+   以前は settings.auth に持っていたが、createSupa はスクリプト読み込み時に
+   一度だけ load() を呼ぶのに対し、settings が入るのは init() の loadSettings() ＝もっと後。
+   そのため保存済みのログイン情報が毎回 null として読まれ、開くたびにログアウトしていた。
+   localStorage から直接読めば読み込み順に左右されない。
+
+   他アプリの sync.js は expires_at をミリ秒、supa.js は秒で持っている。
+   どちらが書いたものでも読めるように、桁で見分けて秒に直す。 */
+const SESSION_KEY = 'sb_session_v1';
+
+/* 最後にログインしたメールアドレス。ログイン欄にあらかじめ入れておくためだけのもので、
+   パスワードは持たない（そちらは iPhone のパスワード保存に任せる）。
+   キーは他アプリと共通なので、1つで入れれば他アプリの欄にも入っている。 */
+const LAST_EMAIL_KEY = 'sb_last_email';
+
+function readJson(key) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
+}
+
+function loadSharedSession() {
+  let raw = readJson(SESSION_KEY);
+  if (!raw || !raw.access_token) {
+    // このアプリだけ設定の中に持っていた頃のもの。1回だけ共通のキーへ移す。
+    const old = (readJson(SET_KEY) || {}).auth;
+    if (!old || !old.access_token) return null;
+    saveSharedSession(old);
+    raw = readJson(SESSION_KEY);
+    if (!raw) return null;
+  }
+  return {
+    access_token:  raw.access_token,
+    refresh_token: raw.refresh_token,
+    expires_at:    raw.expires_at > 1e12 ? Math.floor(raw.expires_at / 1000) : raw.expires_at,
+    user:          raw.user || { id: raw.user_id || null, email: raw.email || null },
+  };
+}
+
+function saveSharedSession(s) {
+  forgetLegacyAuth();
+  if (!s || !s.access_token) { localStorage.removeItem(SESSION_KEY); return; }
+  const u = s.user || {};
+  localStorage.setItem(SESSION_KEY, JSON.stringify({
+    access_token:  s.access_token,
+    refresh_token: s.refresh_token,
+    expires_at:    s.expires_at * 1000,        // 他アプリに合わせてミリ秒で書く
+    user_id: u.id || null,                     // 他アプリはこの形で読む
+    email:   u.email || null,
+    user:    { id: u.id || null, email: u.email || null },
+  }));
+}
+
+/* 引き継いだあとの古いコピーは消す。残しておくと、ログアウトしても
+   次に開いたときに settings.auth から復活してしまう。 */
+function forgetLegacyAuth() {
+  const raw = readJson(SET_KEY);
+  if (raw && raw.auth) { raw.auth = null; localStorage.setItem(SET_KEY, JSON.stringify(raw)); }
+  if (settings) settings.auth = null;
+}
+
+const supa = createSupa({ load: loadSharedSession, save: saveSharedSession });
 
 function queueSession(field, s) {
   settings.pending.push({ id: s.id, field, start: s.start, end: s.end, hours: s.hours, dev: s.dev });
@@ -546,6 +606,10 @@ function renderSettingsInputs() {
   $('auth-out').style.display = supa.signedIn() ? 'none' : '';
   $('auth-in').style.display  = supa.signedIn() ? '' : 'none';
   $('auth-who').textContent   = user ? user.email : '';
+  // 前に使ったアドレスを入れておく（打ち直さなくて済むように）
+  if (!supa.signedIn() && !$('auth-email').value) {
+    $('auth-email').value = localStorage.getItem(LAST_EMAIL_KEY) || '';
+  }
   $('pending-count').textContent = settings.pending.length + settings.pendingOps.length;
 }
 
@@ -563,12 +627,16 @@ function authInputs() {
   return { email: $('auth-email').value.trim(), password: $('auth-pass').value };
 }
 
-$('btn-signin').addEventListener('click', async () => {
+/* click ではなく submit で受ける。iPhoneのパスワード保存はフォームの送信を合図に
+   「保存しますか？」を出すので、ここを click にすると候補に載らない。 */
+$('auth-out').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
   const { email, password } = authInputs();
   if (!email || !password) { msg('sync-msg', 'メールアドレスとパスワードを入力してください', false); return; }
   msg('sync-msg', 'ログイン中…', true);
   try {
     const user = await supa.signIn(email, password);
+    localStorage.setItem(LAST_EMAIL_KEY, email);
     $('auth-pass').value = '';
     renderSettingsInputs();
     msg('sync-msg', `ログインしました（${user.email}）`, true);
@@ -585,6 +653,7 @@ $('btn-signup').addEventListener('click', async () => {
   msg('sync-msg', '登録中…', true);
   try {
     const r = await supa.signUp(email, password);
+    localStorage.setItem(LAST_EMAIL_KEY, email);
     $('auth-pass').value = '';
     renderSettingsInputs();
     if (r.confirmed) { msg('sync-msg', '登録してログインしました', true); await doSync(true); }

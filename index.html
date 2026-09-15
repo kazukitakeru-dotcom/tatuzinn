@@ -133,17 +133,21 @@
         <div class="note" style="margin-bottom:14px;">
           わんにゃんメモリーと同じアカウントでログインしてください。<br>
           <b>PCと同じアカウントにすると記録が合流します。</b><br>
-          <span style="color:var(--goldd);">パスワードは保存されません。</span>
+          <span style="color:var(--goldd);">パスワードはアプリには保存しません。</span><br>
+          <span style="color:var(--dim);">iPhoneの「パスワードを保存」に登録しておくと、次からは欄をタップして選ぶだけで入ります。</span>
         </div>
 
-        <div id="auth-out">
+        <!-- 入力欄を <form> に入れておくこと。
+             iPhoneのパスワード保存（iCloudキーチェーン）は submit を合図に
+             「保存しますか？」を出すので、フォームでないと候補として出てこない。 -->
+        <form id="auth-out" autocomplete="on">
           <div class="label">メールアドレス</div>
-          <input class="inp" id="auth-email" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com" style="margin-bottom:12px;">
+          <input class="inp" id="auth-email" name="email" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com" style="margin-bottom:12px;">
           <div class="label">パスワード</div>
-          <input class="inp" id="auth-pass" type="password" autocomplete="current-password" placeholder="6文字以上" style="margin-bottom:12px;">
-          <button class="btn btn-gold btn-wide" id="btn-signin" style="margin-bottom:9px;">ログイン</button>
-          <button class="btn btn-sm btn-wide" id="btn-signup">新規登録</button>
-        </div>
+          <input class="inp" id="auth-pass" name="password" type="password" autocomplete="current-password" placeholder="6文字以上" style="margin-bottom:12px;">
+          <button class="btn btn-gold btn-wide" id="btn-signin" type="submit" style="margin-bottom:9px;">ログイン</button>
+          <button class="btn btn-sm btn-wide" id="btn-signup" type="button">新規登録</button>
+        </form>
 
         <div id="auth-in" style="display:none;">
           <div style="font-size:12px;margin-bottom:12px;">

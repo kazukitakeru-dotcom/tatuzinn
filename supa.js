@@ -96,10 +96,31 @@ function createSupa(store) {
     return session.user;
   }
 
+  /* 更新トークンは1回使うたびにサーバー側で作り替えられる（使い終わったものは無効になる）。
+     つまり同じトークンで2回叩くと、2回目は必ず「無効」と言われる。
+     pull() は3つのテーブルを Promise.all で同時に取りに行くので、対策が無いと
+     3本が同時に「期限が近いから更新しよう」と判断して同じトークンを3回使い、
+     1本だけ成功して残り2本が400 → ログイン情報を捨てる、が毎回起きていた。
+     ＝1時間以上あけて開くたびにログインし直し。updating で1本にまとめる。 */
+  let updating = null;
+
   async function refresh() {
+    if (updating) return updating;                       // 先行している更新に相乗りする
+    updating = doRefresh().finally(() => { updating = null; });
+    return updating;
+  }
+
+  async function doRefresh() {
+    // 保存先を読み直す。別のアプリ／別のタブが先に更新していれば、そちらが今の正しいトークン。
+    const stored = store.load();
+    if (stored && stored.refresh_token) {
+      if (!session || stored.refresh_token !== session.refresh_token) session = stored;
+    }
     if (!session || !session.refresh_token) throw new Error('ログインが必要です');
+
+    const used = session.refresh_token;
     try {
-      const j = await authPost('token?grant_type=refresh_token', { refresh_token: session.refresh_token });
+      const j = await authPost('token?grant_type=refresh_token', { refresh_token: used });
       setSession(normalizeSession(j));
     } catch (e) {
       // 通信できなかっただけならログイン情報は捨てない。
@@ -107,6 +128,15 @@ function createSupa(store) {
       if (e.offline) throw new Error('オフラインのため同期できません');
       // サーバーが「その更新トークンは無効」と答えたときだけログアウト扱いにする
       if (e.status === 400 || e.status === 401) {
+        // ただし「他の誰かが先に使ったので無効」なだけかもしれない。
+        // もう一度保存先を見て、新しいトークンに入れ替わっていたらそれで1回だけやり直す。
+        const now = store.load();
+        if (now && now.refresh_token && now.refresh_token !== used) {
+          session = now;
+          const j = await authPost('token?grant_type=refresh_token', { refresh_token: now.refresh_token });
+          setSession(normalizeSession(j));
+          return;
+        }
         setSession(null);
         throw new Error('ログインの有効期限が切れました。もう一度ログインしてください');
       }

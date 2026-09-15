@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatsujin-v6';
+const CACHE_NAME = 'tatsujin-v7';
 const FILES_TO_CACHE = [
   './',
   './index.html',

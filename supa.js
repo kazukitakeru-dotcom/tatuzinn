@@ -106,8 +106,17 @@ function createSupa(store) {
 
   async function refresh() {
     if (updating) return updating;                       // 先行している更新に相乗りする
-    updating = doRefresh().finally(() => { updating = null; });
+    updating = withRefreshLock(doRefresh).finally(() => { updating = null; });
     return updating;
+  }
+
+  /* スマホ版は github.io の6アプリで保存先（sb_session_v1）を共有している。
+     別のアプリやタブが同時に同じ更新トークンを使うと、Supabase が使い回しとみなして
+     ログインごと無効にすることがあるので、Web Locks でオリジン全体の更新を1本ずつに並べる。
+     PC版はこのファイルを Node（main.js）で動かしていて navigator が無いので、そのまま実行する。 */
+  function withRefreshLock(fn) {
+    const locks = (typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request) ? navigator.locks : null;
+    return locks ? locks.request('sb-token-refresh', fn) : fn();
   }
 
   async function doRefresh() {
@@ -117,6 +126,8 @@ function createSupa(store) {
       if (!session || stored.refresh_token !== session.refresh_token) session = stored;
     }
     if (!session || !session.refresh_token) throw new Error('ログインが必要です');
+    // 鍵を待っている間に、別のアプリ／タブが更新を済ませていれば、それをそのまま使う
+    if (session.access_token && session.expires_at - Math.floor(Date.now() / 1000) >= 90) return;
 
     const used = session.refresh_token;
     try {
@@ -133,9 +144,17 @@ function createSupa(store) {
         const now = store.load();
         if (now && now.refresh_token && now.refresh_token !== used) {
           session = now;
-          const j = await authPost('token?grant_type=refresh_token', { refresh_token: now.refresh_token });
-          setSession(normalizeSession(j));
-          return;
+          try {
+            const j = await authPost('token?grant_type=refresh_token', { refresh_token: now.refresh_token });
+            setSession(normalizeSession(j));
+            return;
+          } catch (e2) {
+            // やり直しまで断られたら、下でログインし直しにする。
+            // 以前はここで投げっぱなしになり、使えないログイン情報が残ったまま
+            // Invalid Refresh Token: Already Used が出続けていた。
+            if (e2.offline) throw new Error('オフラインのため同期できません');
+            if (e2.status !== 400 && e2.status !== 401) throw e2;
+          }
         }
         setSession(null);
         throw new Error('ログインの有効期限が切れました。もう一度ログインしてください');

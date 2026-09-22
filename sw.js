@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatsujin-v8';
+const CACHE_NAME = 'tatsujin-v9';
 const FILES_TO_CACHE = [
   './',
   './index.html',
@@ -12,8 +12,9 @@ const FILES_TO_CACHE = [
   './icons/icon-512.png'
 ];
 
+// インストール時は cache: 'reload' で必ず取り直す。通すと新しい版のキャッシュに古いファイルが入る
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE)));
+  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE.map(u => new Request(u, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
